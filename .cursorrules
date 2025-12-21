@@ -1,0 +1,18 @@
+# Cursor Rules (n8n repo-first)
+#
+# Source of truth:
+# - Workflows are stored as JSON files in `workflows/*.json` and are versioned on a separate Git branch `workflows`.
+# - Lab tooling (MCP server, schemas, docs, kb) lives on Git branch `lab`.
+#
+# Tooling:
+# - Python environment: uv
+# - Task runner: Poe the Poet (docs): https://poethepoet.natn.io/
+#
+# Operational rules:
+# - Prefer using the local MCP server tools for all workflow CRUD/patch/validate/format and Git operations.
+# - Avoid manual editing of large workflow JSON blobs unless explicitly requested by the user.
+#
+# Canonical reference:
+# - See `agents/agents.md` for the authoritative agent policy and official n8n sources by topic.
+
+

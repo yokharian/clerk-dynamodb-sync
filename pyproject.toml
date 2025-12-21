@@ -1,0 +1,41 @@
+[project]
+name = "n8n-creative-lab"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "jsonschema>=4.23.0",
+  "jsonpatch>=1.33",
+  "mypy>=1.11.0",
+  "pydantic>=2.9.0",
+  "ruff>=0.6.9",
+  "typer>=0.12.0",
+]
+
+[project.scripts]
+n8n-creative-lab = "main:main"
+mcp-n8n-workflows = "mcp.n8n_workflows_mcp.server:main"
+
+[tool.poe.tasks]
+fmt = "python -m ruff format ."
+lint = "python -m ruff check ."
+typecheck = "python -m mypy ."
+run-mcp = "python -m mcp.n8n_workflows_mcp.server"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+no_implicit_optional = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+
