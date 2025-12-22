@@ -4,9 +4,10 @@ import json
 import os
 import subprocess
 import sys
+from json import JSONDecodeError
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Iterable
 
 import jsonpatch
 import jsonschema
@@ -407,25 +408,91 @@ def _mcp_tools_list() -> dict[str, Any]:
     }
 
 
-def main() -> None:
-    # Minimal MCP stdio server: JSON-RPC-ish messages per line.
-    # Cursor MCP implementations typically use line-delimited JSON over stdio.
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            msg = json.loads(line)
-        except json.JSONDecodeError:
-            sys.stdout.write(json.dumps(_error_result("Invalid JSON")) + "\n")
-            sys.stdout.flush()
+def _mcp_initialize_result(client_params: dict[str, Any]) -> dict[str, Any]:
+    """
+    MCP handshake response.
+
+    Cursor expects `serverInfo` to exist; otherwise it reports "No server info found".
+    """
+    protocol_version = client_params.get("protocolVersion") or "2024-11-05"
+    return {
+        "protocolVersion": protocol_version,
+        "capabilities": {
+            "tools": {
+                "listChanged": False,
+            }
+        },
+        "serverInfo": {
+            "name": "n8n-workflows-mcp",
+            "version": "0.1.0",
+        },
+    }
+
+
+def _write_framed(obj: dict[str, Any]) -> None:
+    body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+    header = f"Content-Length: {len(body)}\r\n\r\n".encode("utf-8")
+    sys.stdout.buffer.write(header)
+    sys.stdout.buffer.write(body)
+    sys.stdout.buffer.flush()
+
+
+def _read_message_stream() -> Iterable[dict[str, Any]]:
+    """
+    Read MCP stdio messages.
+
+    Supports:
+    - MCP/LSP style framing: Content-Length headers + JSON payload
+    - Line-delimited JSON (fallback)
+    """
+    buf = sys.stdin.buffer
+    while True:
+        first = buf.readline()
+        if not first:
+            return
+
+        # LSP/MCP framing path
+        if first.startswith(b"Content-Length:"):
+            try:
+                length = int(first.split(b":", 1)[1].strip())
+            except Exception:
+                continue
+
+            # Consume remaining headers until blank line.
+            while True:
+                line = buf.readline()
+                if not line or line in (b"\r\n", b"\n"):
+                    break
+
+            payload = buf.read(length)
+            if not payload:
+                return
+            try:
+                yield json.loads(payload.decode("utf-8"))
+            except JSONDecodeError:
+                continue
             continue
 
+        # Line-delimited JSON fallback
+        try:
+            yield json.loads(first.decode("utf-8").strip())
+        except Exception:
+            continue
+
+
+def main() -> None:
+    for msg in _read_message_stream():
         method = msg.get("method")
         msg_id = msg.get("id")
         params = msg.get("params") or {}
 
-        if method == "tools/list":
+        # Notifications have no id; do not respond.
+        if msg_id is None:
+            continue
+
+        if method == "initialize":
+            result = _mcp_initialize_result(params)
+        elif method == "tools/list":
             result = _mcp_tools_list()
         elif method == "tools/call":
             tool_name = params.get("name")
@@ -438,8 +505,7 @@ def main() -> None:
             result = _error_result(f"Unsupported method: {method}")
 
         resp = {"jsonrpc": "2.0", "id": msg_id, "result": result}
-        sys.stdout.write(json.dumps(resp, ensure_ascii=False) + "\n")
-        sys.stdout.flush()
+        _write_framed(resp)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,11 @@
 {
   "name": "n8n-workflows-mcp",
   "description": "Repo-first MCP server for n8n workflows (CRUD + validate/format + git helpers)",
-  "command": "python",
-  "args": ["-m", "mcp.n8n_workflows_mcp.server"]
+  "command": "bash",
+  "args": [
+    "-lc",
+    "cd /Volumes/MacOS_SSD/SourceCode/n8n-creative-lab && uv run python -m mcp.n8n_workflows_mcp.server"
+  ]
 }
 
 
