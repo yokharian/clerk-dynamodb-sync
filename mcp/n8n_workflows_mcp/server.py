@@ -7,7 +7,7 @@ import sys
 from json import JSONDecodeError
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import jsonpatch
 import jsonschema
@@ -429,59 +429,25 @@ def _mcp_initialize_result(client_params: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _write_framed(obj: dict[str, Any]) -> None:
-    body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
-    header = f"Content-Length: {len(body)}\r\n\r\n".encode("utf-8")
-    sys.stdout.buffer.write(header)
-    sys.stdout.buffer.write(body)
-    sys.stdout.buffer.flush()
-
-
-def _read_message_stream() -> Iterable[dict[str, Any]]:
+def _write_line(obj: dict[str, Any]) -> None:
     """
-    Read MCP stdio messages.
-
-    Supports:
-    - MCP/LSP style framing: Content-Length headers + JSON payload
-    - Line-delimited JSON (fallback)
+    Cursor's MCP runner expects line-delimited JSON on stdio.
     """
-    buf = sys.stdin.buffer
-    while True:
-        first = buf.readline()
-        if not first:
-            return
-
-        # LSP/MCP framing path
-        if first.startswith(b"Content-Length:"):
-            try:
-                length = int(first.split(b":", 1)[1].strip())
-            except Exception:
-                continue
-
-            # Consume remaining headers until blank line.
-            while True:
-                line = buf.readline()
-                if not line or line in (b"\r\n", b"\n"):
-                    break
-
-            payload = buf.read(length)
-            if not payload:
-                return
-            try:
-                yield json.loads(payload.decode("utf-8"))
-            except JSONDecodeError:
-                continue
-            continue
-
-        # Line-delimited JSON fallback
-        try:
-            yield json.loads(first.decode("utf-8").strip())
-        except Exception:
-            continue
+    sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    sys.stdout.flush()
 
 
 def main() -> None:
-    for msg in _read_message_stream():
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            msg = json.loads(line)
+        except JSONDecodeError:
+            _write_line({"jsonrpc": "2.0", "id": None, "error": {"message": "Invalid JSON"}})
+            continue
+
         method = msg.get("method")
         msg_id = msg.get("id")
         params = msg.get("params") or {}
@@ -505,7 +471,7 @@ def main() -> None:
             result = _error_result(f"Unsupported method: {method}")
 
         resp = {"jsonrpc": "2.0", "id": msg_id, "result": result}
-        _write_framed(resp)
+        _write_line(resp)
 
 
 if __name__ == "__main__":
