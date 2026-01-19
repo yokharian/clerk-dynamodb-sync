@@ -1,0 +1,13 @@
+help me create a claude.md file in this project to set up what we want to do here. So this project is essentially built to help me turn n8n workflows into apps.
+
+So there’s going to be a couple pieces.
+
+The first piece is going to look at my workflows in n8n to make sure that they’re ready to go as far as having the proper intake of data and output of data so that if it’s a web app when the app sends the data to n8n it can receive it and then we can also send that response back to the app for it to be properly displayed.
+
+Once we know that the workflow is optimized then we have to build the actual front-end itself. And so when we’re testing it out we’ll probably have it in a local environment. And then once we’ve optimized the actual front-end itself which should utilize Next.js and React so it’s a real proper web app then we want to push those changes to GitHub and then after we’ve pushed the changes to GitHub so that we have the repository we want to actually deploy those on Vercel so that it syncs so that later if we come back and we make a change to the workflow or to the front-end we can just push those changes to GitHub and it will automatically reflect in Vercel.
+
+So a couple things that we will utilize will be the n8n MCP so that you understand nodes configurations templates and that you can also look at my n8n instance and see the workflows and change them.
+
+I’ll also give you access to two skills the n8n skills and the front-end designer skill and then we’ll also need to give you the GitHub MCP so you can actually push my changes to GitHub.
+
+So with all that in mind ask me any questions that you need and then help me create a concise claude.md file that’s very simple and helps this project run as smoothly as possible. Make sure that the file structure is organized and it will stay neat and lean.
