@@ -1,0 +1,35 @@
+@startuml Clerk DynamoDB Sync
+!theme sketchy-outline
+skinparam componentStyle rectangle
+
+actor "Frontend\nClient" as fe
+actor "Clerk\nService" as clerk
+participant "API\nGateway" as apigw
+participant "JWT\nAuthorizer" as jwt
+participant "Webhook\nLambda" as whl
+participant "User API\nLambda" as ul
+database "DynamoDB\n(Users)" as ddb
+
+fe -> clerk: Authenticate
+clerk --> fe: JWT token
+
+== Authenticated API ==
+
+fe -> apigw: GET/POST /users\n(Bearer JWT)
+apigw -> jwt: Validate token
+jwt --> apigw: Valid
+apigw -> ul: Forward request
+ul -> ddb: Read/Write user data
+ddb --> ul: Response
+ul --> fe: JSON response
+
+== Webhook Sync ==
+
+clerk -> apigw: POST /webhooks/clerk\n(user event)
+apigw -> whl: Forward event
+whl -> whl: Verify Clerk\nsignature
+whl -> ddb: Upsert/Delete\nuser record
+ddb --> whl: Confirm
+whl --> clerk: 200 OK
+
+@enduml
